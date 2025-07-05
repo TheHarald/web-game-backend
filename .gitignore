@@ -1,6 +1,2 @@
-/node_modules
-/client/node_modules
-/server/node_modules
-/packages/client/node_modules
-/packages/server/node_modules
-/packages/shared/dist
+**/node_modules/**
+**/dist/**
