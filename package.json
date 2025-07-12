@@ -1,17 +1,26 @@
 {
-  "name": "web-game",
-  "private": true,
-  "workspaces": [
-    "packages/*"
-  ],
+  "name": "@web-game/backend",
+  "version": "1.0.0",
+  "main": "index.js",
   "scripts": {
-    "dev": "concurrently \"npm:dev:client\" \"npm:dev:server\"",
-    "dev:client": "npm run dev -w client",
-    "dev:server": "npm run dev -w server",
-    "build": "npm run build -ws"
+    "start": "node dist/index.js",
+    "dev": "nodemon src/index.ts",
+    "build": "tsc"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "express": "^5.1.0",
+    "socket.io": "^4.8.1"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2",
-    "typescript": "~5.8.3"
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.0.13",
+    "@types/socket.io": "^3.0.1",
+    "nodemon": "^3.1.10",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
   }
 }
