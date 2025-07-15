@@ -13,10 +13,6 @@ export enum WebGameEvents {
   RecivePoo = "recive-poo",
 }
 
-export type TRoom = {
-  code: string;
-};
-
 export type TUser = {
   id: string;
   name: string;
@@ -24,6 +20,7 @@ export type TUser = {
 
 export type TMessage = {
   content: string;
+  sender: TUser;
 };
 
 export type ClientToServerEvents = {
@@ -46,14 +43,14 @@ export type ClientToServerEvents = {
     message,
     roomCode,
   }: {
-    message: string;
+    message: TMessage;
     roomCode: string;
   }) => void;
   [WebGameEvents.CreateRoom]: (userName: string) => void;
 };
 
 export type ServerToClientEvents = {
-  [WebGameEvents.ReciveMessage]: (message: string) => void;
+  [WebGameEvents.ReciveMessage]: (message: TMessage) => void;
   [WebGameEvents.UserJoined]: ({
     users,
     roomCode,
