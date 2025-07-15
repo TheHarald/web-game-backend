@@ -1,7 +1,14 @@
 import { createClient } from "redis";
 import { TUser } from "./types";
+import dotenv from "dotenv";
+dotenv.config();
 
-const redis = createClient();
+const redis = createClient({
+  socket: {
+    host: process.env.HOST || "localhost",
+    port: Number(process.env.REDIS_PORT) || 6379,
+  },
+});
 
 // Add error handling
 redis.on("error", (err) => console.error("Redis Client Error", err));
