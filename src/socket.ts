@@ -3,84 +3,107 @@ import { Server as HttpServer } from "http";
 import {
   ClientToServerEvents,
   ServerToClientEvents,
-  TJoinRoomParams,
-  TLeaveRoomParams,
   TUser,
   WebGameEvents,
 } from "./types";
-
-const rooms = new Map<string, TUser[]>();
+import { addUser, getUser, getUsers, removeUser } from "./redis";
+import { generateRoomCode } from "./utils";
 
 export function initSocket(server: HttpServer) {
   // Socket.IO setup with proper CORS configuration
-  const io = new Server(server, {
-    cors: {
-      origin: "*",
-      methods: ["GET", "POST"],
-    },
-  });
+  const io = new Server<ClientToServerEvents, ServerToClientEvents, {}, {}>(
+    server,
+    {
+      cors: {
+        origin: "*", // TODO replace from env
+        methods: ["GET", "POST"],
+      },
+    }
+  );
 
   io.on(
     WebGameEvents.Connection,
     (socket: Socket<ClientToServerEvents, ServerToClientEvents, {}, {}>) => {
       console.log("New client connected:", socket.id);
 
-      socket.on(WebGameEvents.JoinRoom, (params) => {
-        const { user, room } = params;
+      socket.on(WebGameEvents.JoinRoom, async (params) => {
+        const { userName, roomCode } = params;
 
-        socket.join(room.code);
+        const newUser: TUser = {
+          id: socket.id,
+          name: userName,
+        };
 
-        // Initialize room if it doesn't exist
-        if (!rooms.has(room.code)) {
-          rooms.set(room.code, []);
-        }
+        socket.join(roomCode);
 
-        const targetRoom = rooms.get(room.code);
+        addUser(roomCode, newUser);
 
-        if (targetRoom === undefined) return;
+        const users = await getUsers(roomCode);
 
-        // Add user to room
-        targetRoom.push({ id: user.id, name: user.name });
+        io.to(socket.id).emit(WebGameEvents.MyUserJoined, newUser);
 
         // Notify room about new user
-        io.to(room.code).emit(WebGameEvents.UserJoined, {
-          users: targetRoom,
-          roomId: room.code,
+        io.to(roomCode).emit(WebGameEvents.UserJoined, {
+          users: users,
+          roomCode: roomCode,
         });
 
-        console.log(`${user.name} joined room ${room}`);
+        console.log(`${userName} joined to room ${roomCode}`);
       });
 
-      socket.on(WebGameEvents.LeaveRoom, (params) => {
-        const { room, user } = params;
+      socket.on(WebGameEvents.CreateRoom, async (userName) => {
+        const newUser: TUser = {
+          id: socket.id,
+          name: userName,
+        };
 
-        console.log(room, user);
+        const newRoomCode = generateRoomCode();
 
-        const targetRoom = rooms.get(room.code);
+        socket.join(newRoomCode);
 
-        if (targetRoom === undefined) return;
+        addUser(newRoomCode, newUser);
 
-        rooms.set(
-          room.code,
-          targetRoom.filter((item) => item.id !== user.id)
-        );
+        const users = await getUsers(newRoomCode);
 
-        const users = rooms.get(room.code);
+        io.to(socket.id).emit(WebGameEvents.MyUserJoined, newUser);
 
-        // Notify room about user leaving
-        io.to(room.code).emit(WebGameEvents.UserLeft, {
-          users: users ?? [],
-          roomId: room.code,
+        // Notify room about new user
+        io.to(newRoomCode).emit(WebGameEvents.UserJoined, {
+          users: users,
+          roomCode: newRoomCode,
         });
 
-        // Clean up empty rooms
-        if (rooms.get(room.code)?.length === 0) {
-          rooms.delete(room.code);
-        }
+        console.log(`${userName} created room ${newRoomCode} and join`);
+      });
 
-        socket.leave(room.code);
+      socket.on(WebGameEvents.LeaveRoom, async (params) => {
+        const { roomCode, userId } = params;
 
-        console.log(`${user.name} left room ${room}`);
+        removeUser(roomCode, userId);
+
+        const users = await getUsers(roomCode);
+
+        // Notify room about user leaving
+        io.to(roomCode).emit(WebGameEvents.UserLeft, {
+          users: users,
+          roomCode: roomCode,
+        });
+
+        socket.leave(roomCode);
+
+        console.log(`${userId} left room ${roomCode}`);
+      });
+
+      socket.on(WebGameEvents.SendPoo, (userId) => {
+        console.log("poo get", userId);
+        io.to(userId).emit(WebGameEvents.RecivePoo);
+      });
+
+      socket.on(WebGameEvents.SendMessage, (params) => {
+        io.to(params.roomCode).emit(
+          WebGameEvents.ReciveMessage,
+          params.message
+        );
       });
 
       socket.on(WebGameEvents.Disconnect, () => {

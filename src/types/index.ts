@@ -1,12 +1,16 @@
 export enum WebGameEvents {
   Disconnect = "disconnect",
   Connection = "connection",
-  SendMessage = "send-message",
   JoinRoom = "join-room",
+  CreateRoom = "create-room",
+  SendMessage = "send-message",
   ReciveMessage = "recive-message",
   LeaveRoom = "leave-room",
   UserLeft = "user-left",
   UserJoined = "user-joined",
+  MyUserJoined = "my-user-joined",
+  SendPoo = "send-poo",
+  RecivePoo = "recive-poo",
 }
 
 export type TRoom = {
@@ -22,29 +26,48 @@ export type TMessage = {
   content: string;
 };
 
-export type TJoinRoomParams = {
-  room: TRoom;
-  user: TUser;
-};
-
-export type TLeaveRoomParams = {
-  room: TRoom;
-  user: TUser;
-};
-
-export type TUserJoinedParams = {
-  room: TRoom;
-  user: TUser;
-};
-
 export type ClientToServerEvents = {
-  [WebGameEvents.SendMessage]: (message: TMessage) => void;
-  [WebGameEvents.JoinRoom]: (params: TJoinRoomParams) => void;
-  [WebGameEvents.LeaveRoom]: (params: TLeaveRoomParams) => void;
+  [WebGameEvents.JoinRoom]: ({
+    roomCode,
+    userName,
+  }: {
+    roomCode: string;
+    userName: string;
+  }) => void;
+  [WebGameEvents.LeaveRoom]: ({
+    roomCode,
+    userId,
+  }: {
+    roomCode: string;
+    userId: string;
+  }) => void;
+  [WebGameEvents.SendPoo]: (userId: string) => void;
+  [WebGameEvents.SendMessage]: ({
+    message,
+    roomCode,
+  }: {
+    message: string;
+    roomCode: string;
+  }) => void;
+  [WebGameEvents.CreateRoom]: (userName: string) => void;
 };
 
 export type ServerToClientEvents = {
-  [WebGameEvents.ReciveMessage]: (message: TMessage) => void;
-  [WebGameEvents.UserJoined]: (params: TUserJoinedParams) => void;
-  [WebGameEvents.UserLeft]: (params: TLeaveRoomParams) => void;
+  [WebGameEvents.ReciveMessage]: (message: string) => void;
+  [WebGameEvents.UserJoined]: ({
+    users,
+    roomCode,
+  }: {
+    users: TUser[];
+    roomCode: string;
+  }) => void;
+  [WebGameEvents.UserLeft]: ({
+    users,
+    roomCode,
+  }: {
+    users: TUser[];
+    roomCode: string;
+  }) => void;
+  [WebGameEvents.MyUserJoined]: (user: TUser) => void;
+  [WebGameEvents.RecivePoo]: () => void;
 };
