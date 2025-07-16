@@ -6,7 +6,7 @@ import {
   TUser,
   WebGameEvents,
 } from "./types";
-import { addUser, getUser, getUsers, removeUser } from "./redis";
+import { addUser, getUsers, hasRoomAdmin, removeUser } from "./redis";
 import { generateRoomCode } from "./utils";
 
 export function initSocket(server: HttpServer) {
@@ -29,9 +29,14 @@ export function initSocket(server: HttpServer) {
       socket.on(WebGameEvents.JoinRoom, async (params) => {
         const { userName, roomCode } = params;
 
+        const hasAdmin = await hasRoomAdmin(roomCode);
+
+        console.log(hasAdmin);
+
         const newUser: TUser = {
           id: socket.id,
           name: userName,
+          isAdmin: !hasAdmin,
         };
 
         socket.join(roomCode);
@@ -55,6 +60,7 @@ export function initSocket(server: HttpServer) {
         const newUser: TUser = {
           id: socket.id,
           name: userName,
+          isAdmin: true,
         };
 
         const newRoomCode = generateRoomCode();
@@ -95,7 +101,7 @@ export function initSocket(server: HttpServer) {
       });
 
       socket.on(WebGameEvents.SendPoo, (userId) => {
-        console.log("poo get", userId);
+        console.log("poo send to", userId);
         io.to(userId).emit(WebGameEvents.RecivePoo);
       });
 

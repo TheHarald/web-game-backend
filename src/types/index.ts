@@ -11,11 +11,32 @@ export enum WebGameEvents {
   MyUserJoined = "my-user-joined",
   SendPoo = "send-poo",
   RecivePoo = "recive-poo",
+
+  // игровые события
+  StaterGame = "stater-game",
+
+  CreateImage = "create-image",
+  ImageCreated = "image-created",
+  AllImagesCreated = "all-images-created",
+
+  CreateMeme = "create-meme",
+  MemeCreated = "meme-created",
+  AllMemesCreated = "all-memes-created",
+}
+
+export enum WebGameStates {
+  Default = "default",
+  WaitStart = "wait-start",
+  CreateImage = "create-image",
+  CreateMeme = "create-meme",
+  WatchMeme = "watch-meme",
+  EndGame = "end-game",
 }
 
 export type TUser = {
   id: string;
   name: string;
+  isAdmin: boolean;
 };
 
 export type TMessage = {

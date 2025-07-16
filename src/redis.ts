@@ -51,6 +51,12 @@ export async function getUsers(room: string): Promise<TUser[]> {
   });
 }
 
+export async function hasRoomAdmin(room: string): Promise<boolean> {
+  const allRoomUsers = await getUsers(room);
+
+  return allRoomUsers.some((user) => user.isAdmin);
+}
+
 export async function getUser(
   room: string,
   id: string
