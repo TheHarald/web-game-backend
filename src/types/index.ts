@@ -28,8 +28,8 @@ export enum WebGameEvents {
 export enum WebGameStates {
   Default = "default",
   WaitStart = "wait-start",
-  CreateImage = "create-image",
-  CreateMeme = "create-meme",
+  CreatingImage = "creating-image",
+  CreatingMeme = "creating-meme",
   WatchMeme = "watch-meme",
   EndGame = "end-game",
 }
@@ -47,9 +47,10 @@ export type TMessage = {
 
 export type TMeme = {
   id: string;
-  src: string;
+  src: string | undefined;
   text: string;
   authorId: string;
+  forUserId: string | undefined;
 };
 
 export type TRoom = {
@@ -90,6 +91,20 @@ export type ClientToServerEvents = {
     roomCode: string;
     state: WebGameStates;
   }) => void;
+  [WebGameEvents.CreateImage]: ({
+    roomCode,
+    meme,
+  }: {
+    roomCode: string;
+    meme: TMeme;
+  }) => void;
+  [WebGameEvents.CreateMeme]: ({
+    roomCode,
+    meme,
+  }: {
+    roomCode: string;
+    meme: TMeme;
+  }) => void;
 };
 
 export type ServerToClientEvents = {
@@ -99,4 +114,6 @@ export type ServerToClientEvents = {
   [WebGameEvents.MyUserJoined]: (user: TUser) => void;
   [WebGameEvents.RecivePoo]: () => void;
   [WebGameEvents.GameStateChanged]: (room: TRoom) => void;
+  [WebGameEvents.ImageCreated]: (room: TRoom) => void;
+  [WebGameEvents.MemeCreated]: (room: TRoom) => void;
 };

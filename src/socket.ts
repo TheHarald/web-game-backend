@@ -15,8 +15,9 @@ import {
   getRoom,
   hasRoomAdmin,
   patchRoom,
+  updateMemeInRoom,
 } from "./redis";
-import { generateRoomCode } from "./utils";
+import { generatateId, shuffleAndAssignMemeRecipients } from "./utils";
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -83,16 +84,18 @@ export function initSocket(server: HttpServer) {
           isAdmin: true,
         };
 
-        const newRoomCode = generateRoomCode();
+        const newRoomCode = generatateId();
 
         const newRoom: TRoom = {
           roomCode: newRoomCode,
           memes: [],
           state: WebGameStates.WaitStart,
-          users: [newUser],
+          users: [],
         };
 
         await addRoom(newRoom);
+
+        await addUserToRoom(newRoomCode, newUser);
 
         const room = await getRoom(newRoomCode);
 
@@ -144,11 +147,51 @@ export function initSocket(server: HttpServer) {
           state,
         });
 
+        if (state === WebGameStates.CreatingImage) {
+          const room = await getRoom(roomCode);
+
+          if (!room) return;
+
+          const newMemes = shuffleAndAssignMemeRecipients(room.memes);
+
+          await patchRoom(roomCode, {
+            memes: newMemes,
+          });
+        }
+
+        const shufledRoom = await getRoom(roomCode);
+
+        if (!shufledRoom) return;
+
+        io.to(roomCode).emit(WebGameEvents.GameStateChanged, shufledRoom);
+      });
+
+      socket.on(WebGameEvents.CreateImage, async ({ meme, roomCode }) => {
+        console.log("create image", meme, roomCode);
+
+        await updateMemeInRoom(roomCode, meme);
+
         const room = await getRoom(roomCode);
+
+        console.log(room);
 
         if (!room) return;
 
-        io.to(roomCode).emit(WebGameEvents.GameStateChanged, room);
+        io.to(roomCode).emit(WebGameEvents.ImageCreated, room);
+      });
+
+      socket.on(WebGameEvents.CreateMeme, async ({ meme, roomCode }) => {
+        console.log("Meme created", meme, roomCode);
+
+        await updateMemeInRoom(roomCode, meme);
+
+        const room = await getRoom(roomCode);
+
+        console.log(room);
+
+        if (!room) return;
+
+        io.to(roomCode).emit(WebGameEvents.MemeCreated, room);
       });
 
       socket.on(WebGameEvents.Disconnect, async () => {

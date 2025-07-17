@@ -1,6 +1,7 @@
 import { createClient } from "redis";
-import { TRoom, TUser } from "./types";
+import { TMeme, TRoom, TUser } from "./types";
 import dotenv from "dotenv";
+import { generatateId } from "./utils";
 dotenv.config();
 
 const redis = createClient({
@@ -94,6 +95,38 @@ export async function addUserToRoom(
     const room = await getRoom(roomCode);
     if (!room) throw new Error("Room not found");
     room.users.push(user);
+    room.memes.push({
+      id: generatateId(16),
+      src: undefined,
+      text: "",
+      authorId: user.id,
+      forUserId: undefined,
+    });
+    await setRoom(room);
+  } catch (error) {
+    console.error(`Error adding user to room ${roomCode}:`, error);
+    throw new Error("Failed to add user to room");
+  }
+}
+
+export async function updateMemeInRoom(
+  roomCode: string,
+  meme: TMeme
+): Promise<void> {
+  try {
+    const room = await getRoom(roomCode);
+    if (!room) throw new Error("Room not found");
+    const newMemes = room.memes.map((m) => {
+      if (m.id === meme.id) {
+        return meme;
+      }
+
+      return m;
+    });
+
+    console.log(newMemes);
+
+    room.memes = newMemes;
     await setRoom(room);
   } catch (error) {
     console.error(`Error adding user to room ${roomCode}:`, error);
@@ -112,6 +145,7 @@ export async function deleteUserFromRoom(
 
     // Filter out the user
     room.users = room.users.filter((u) => u.id !== userId);
+    room.memes = room.memes.filter((m) => m.authorId !== userId);
 
     // Full overwrite (consistent with your setRoom approach)
     await setRoom(room);
