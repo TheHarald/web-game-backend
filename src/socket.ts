@@ -39,7 +39,7 @@ export function initSocket(server: HttpServer) {
     server,
     {
       cors: {
-        origin: getCorsOrigin(),
+        origin: "*",
         methods: ["GET", "POST"],
       },
     }
