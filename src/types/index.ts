@@ -13,7 +13,8 @@ export enum WebGameEvents {
   RecivePoo = "recive-poo",
 
   // игровые события
-  StaterGame = "stater-game",
+  StartGame = "start-game",
+  GameStateChanged = "game-state-changed",
 
   CreateImage = "create-image",
   ImageCreated = "image-created",
@@ -44,6 +45,20 @@ export type TMessage = {
   sender: TUser;
 };
 
+export type TMeme = {
+  id: string;
+  src: string;
+  text: string;
+  authorId: string;
+};
+
+export type TRoom = {
+  roomCode: string; // uniq
+  state: WebGameStates;
+  memes: TMeme[];
+  users: TUser[];
+};
+
 export type ClientToServerEvents = {
   [WebGameEvents.JoinRoom]: ({
     roomCode,
@@ -68,24 +83,14 @@ export type ClientToServerEvents = {
     roomCode: string;
   }) => void;
   [WebGameEvents.CreateRoom]: (userName: string) => void;
+  [WebGameEvents.StartGame]: (roomCode: string) => void;
 };
 
 export type ServerToClientEvents = {
   [WebGameEvents.ReciveMessage]: (message: TMessage) => void;
-  [WebGameEvents.UserJoined]: ({
-    users,
-    roomCode,
-  }: {
-    users: TUser[];
-    roomCode: string;
-  }) => void;
-  [WebGameEvents.UserLeft]: ({
-    users,
-    roomCode,
-  }: {
-    users: TUser[];
-    roomCode: string;
-  }) => void;
+  [WebGameEvents.UserJoined]: (room: TRoom) => void;
+  [WebGameEvents.UserLeft]: (room: TRoom) => void;
   [WebGameEvents.MyUserJoined]: (user: TUser) => void;
   [WebGameEvents.RecivePoo]: () => void;
+  [WebGameEvents.GameStateChanged]: (state: WebGameStates) => void;
 };

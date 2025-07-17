@@ -3,10 +3,18 @@ import { Server as HttpServer } from "http";
 import {
   ClientToServerEvents,
   ServerToClientEvents,
+  TRoom,
   TUser,
   WebGameEvents,
+  WebGameStates,
 } from "./types";
-import { addUser, getUsers, hasRoomAdmin, removeUser } from "./redis";
+import {
+  addRoom,
+  addUserToRoom,
+  deleteUserFromRoom,
+  getRoom,
+  hasRoomAdmin,
+} from "./redis";
 import { generateRoomCode } from "./utils";
 
 export function initSocket(server: HttpServer) {
@@ -31,27 +39,24 @@ export function initSocket(server: HttpServer) {
 
         const hasAdmin = await hasRoomAdmin(roomCode);
 
-        console.log(hasAdmin);
-
         const newUser: TUser = {
           id: socket.id,
           name: userName,
           isAdmin: !hasAdmin,
         };
 
+        await addUserToRoom(roomCode, newUser);
+
+        const room = await getRoom(roomCode);
+
+        if (!room) return;
+
         socket.join(roomCode);
-
-        addUser(roomCode, newUser);
-
-        const users = await getUsers(roomCode);
 
         io.to(socket.id).emit(WebGameEvents.MyUserJoined, newUser);
 
         // Notify room about new user
-        io.to(roomCode).emit(WebGameEvents.UserJoined, {
-          users: users,
-          roomCode: roomCode,
-        });
+        io.to(roomCode).emit(WebGameEvents.UserJoined, room);
 
         console.log(`${userName} joined to room ${roomCode}`);
       });
@@ -65,19 +70,25 @@ export function initSocket(server: HttpServer) {
 
         const newRoomCode = generateRoomCode();
 
+        const newRoom: TRoom = {
+          roomCode: newRoomCode,
+          memes: [],
+          state: WebGameStates.WaitStart,
+          users: [newUser],
+        };
+
+        await addRoom(newRoom);
+
+        const room = await getRoom(newRoomCode);
+
+        if (!room) return;
+
         socket.join(newRoomCode);
-
-        addUser(newRoomCode, newUser);
-
-        const users = await getUsers(newRoomCode);
 
         io.to(socket.id).emit(WebGameEvents.MyUserJoined, newUser);
 
         // Notify room about new user
-        io.to(newRoomCode).emit(WebGameEvents.UserJoined, {
-          users: users,
-          roomCode: newRoomCode,
-        });
+        io.to(newRoomCode).emit(WebGameEvents.UserJoined, room);
 
         console.log(`${userName} created room ${newRoomCode} and join`);
       });
@@ -85,15 +96,14 @@ export function initSocket(server: HttpServer) {
       socket.on(WebGameEvents.LeaveRoom, async (params) => {
         const { roomCode, userId } = params;
 
-        removeUser(roomCode, userId);
+        await deleteUserFromRoom(roomCode, userId);
 
-        const users = await getUsers(roomCode);
+        const room = await getRoom(roomCode);
+
+        if (!room) return;
 
         // Notify room about user leaving
-        io.to(roomCode).emit(WebGameEvents.UserLeft, {
-          users: users,
-          roomCode: roomCode,
-        });
+        io.to(roomCode).emit(WebGameEvents.UserLeft, room);
 
         socket.leave(roomCode);
 
@@ -112,7 +122,9 @@ export function initSocket(server: HttpServer) {
         );
       });
 
-      socket.on(WebGameEvents.Disconnect, () => {
+      socket.on(WebGameEvents.StartGame, (roomCode) => {});
+
+      socket.on(WebGameEvents.Disconnect, async () => {
         console.log("Client disconnected:", socket.id);
       });
     }

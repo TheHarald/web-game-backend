@@ -1,5 +1,5 @@
 import { createClient } from "redis";
-import { TUser } from "./types";
+import { TRoom, TUser } from "./types";
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -29,43 +29,104 @@ export async function addUser(room: string, user: TUser): Promise<void> {
   await redis.sAdd("rooms:list", room);
 }
 
-export async function removeUser(room: string, userId: string): Promise<void> {
-  await redis.hDel(`room:${room}:users`, userId);
+export async function addRoom(room: TRoom): Promise<void> {
+  try {
+    // Using roomCode as the Redis key
+    const roomKey = `room:${room.roomCode}`;
 
-  // If room is empty, consider removing it
-  const userCount = await redis.hLen(`room:${room}:users`);
-  if (userCount === 0) {
-    await redis.sRem("rooms:list", room);
+    // Store the room data in Redis
+    await redis.set(roomKey, JSON.stringify(room));
+
+    // Optionally, you might want to add the room code to a set of all rooms
+    await redis.sAdd("rooms:list", room.roomCode);
+
+    console.log(`Room ${room.roomCode} added successfully`);
+  } catch (error) {
+    console.error("Error adding room to Redis:", error);
+    throw error; // Re-throw the error to handle it in the calling function
   }
 }
 
-export async function getUsers(room: string): Promise<TUser[]> {
-  const rawUsers = await redis.hGetAll(`room:${room}:users`);
+// Get room by room code
+export async function getRoom(roomCode: string): Promise<TRoom | null> {
+  try {
+    const roomKey = `room:${roomCode}`;
+    const roomData = await redis.get(roomKey);
 
-  if (!rawUsers || Object.keys(rawUsers).length === 0) {
-    return [];
+    if (!roomData) return null;
+
+    return JSON.parse(roomData) as TRoom;
+  } catch (error) {
+    console.error("Error getting room:", error);
+    throw new Error("Failed to get room");
   }
-
-  return Object.entries(rawUsers).map(([_, userData]) => {
-    return JSON.parse(userData);
-  });
 }
 
-export async function hasRoomAdmin(room: string): Promise<boolean> {
-  const allRoomUsers = await getUsers(room);
-
-  return allRoomUsers.some((user) => user.isAdmin);
+// Check if room exists
+export async function roomExists(roomCode: string): Promise<boolean> {
+  try {
+    const roomKey = `room:${roomCode}`;
+    const exists = await redis.exists(roomKey);
+    return exists === 1;
+  } catch (error) {
+    console.error("Error checking room existence:", error);
+    throw new Error("Failed to check room existence");
+  }
 }
 
-export async function getUser(
-  room: string,
-  id: string
-): Promise<TUser | undefined> {
-  const rawUser = await redis.hGet(`room:${room}:users`, id);
+export async function setRoom(room: TRoom, ttl?: number): Promise<void> {
+  try {
+    const roomKey = `room:${room.roomCode}`;
+    const options = ttl ? { EX: ttl } : undefined;
 
-  return rawUser ? JSON.parse(rawUser) : undefined;
+    await redis.set(roomKey, JSON.stringify(room), options);
+  } catch (error) {
+    console.error(`Error setting room ${room.roomCode}:`, error);
+    throw new Error("Failed to set room");
+  }
 }
 
-export async function roomExists(room: string): Promise<boolean> {
-  return (await redis.sIsMember("rooms:list", room)) === 1;
+export async function addUserToRoom(
+  roomCode: string,
+  user: TUser
+): Promise<void> {
+  try {
+    const room = await getRoom(roomCode);
+    if (!room) throw new Error("Room not found");
+    room.users.push(user);
+    await setRoom(room);
+  } catch (error) {
+    console.error(`Error adding user to room ${roomCode}:`, error);
+    throw new Error("Failed to add user to room");
+  }
+}
+
+export async function deleteUserFromRoom(
+  roomCode: string,
+  userId: string
+): Promise<void> {
+  try {
+    // Get current room data
+    const room = await getRoom(roomCode);
+    if (!room) throw new Error("Room not found");
+
+    // Filter out the user
+    room.users = room.users.filter((u) => u.id !== userId);
+
+    // Full overwrite (consistent with your setRoom approach)
+    await setRoom(room);
+  } catch (error) {
+    console.error(`Error removing user from room ${roomCode}:`, error);
+    throw new Error("Failed to remove user from room");
+  }
+}
+
+export async function hasRoomAdmin(roomCode: string): Promise<boolean> {
+  try {
+    const room = await getRoom(roomCode);
+    return room ? room.users.some((user) => user.isAdmin) : false;
+  } catch (error) {
+    console.error(`Error checking admin status for room ${roomCode}:`, error);
+    return false;
+  }
 }
