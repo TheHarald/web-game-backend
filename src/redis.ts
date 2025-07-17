@@ -130,3 +130,30 @@ export async function hasRoomAdmin(roomCode: string): Promise<boolean> {
     return false;
   }
 }
+
+export async function patchRoom(
+  roomCode: string,
+  updates: Omit<Partial<TRoom>, "roomCode">,
+  ttl?: number
+): Promise<void> {
+  try {
+    const roomKey = `room:${roomCode}`;
+    const currentRoom = await getRoom(roomCode);
+
+    if (!currentRoom) {
+      throw new Error("Room not found");
+    }
+
+    const updatedRoom = {
+      ...currentRoom,
+      ...updates,
+      roomCode, // Ensure roomCode stays unchanged
+    };
+
+    const options = ttl ? { EX: ttl } : undefined;
+    await redis.set(roomKey, JSON.stringify(updatedRoom), options);
+  } catch (error) {
+    console.error(`Error patching room ${roomCode}:`, error);
+    throw new Error("Failed to patch room");
+  }
+}

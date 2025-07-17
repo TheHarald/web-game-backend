@@ -14,8 +14,23 @@ import {
   deleteUserFromRoom,
   getRoom,
   hasRoomAdmin,
+  patchRoom,
 } from "./redis";
 import { generateRoomCode } from "./utils";
+import dotenv from "dotenv";
+dotenv.config();
+
+function getCorsOrigin() {
+  if (process.env.NODE_ENV === "development") {
+    return "*";
+  }
+
+  if (process.env.HOST && process.env.PORT) {
+    return `https://${process.env.HOST}:${process.env.PORT}`;
+  }
+
+  return "*";
+}
 
 export function initSocket(server: HttpServer) {
   // Socket.IO setup with proper CORS configuration
@@ -23,7 +38,7 @@ export function initSocket(server: HttpServer) {
     server,
     {
       cors: {
-        origin: "*", // TODO replace from env
+        origin: getCorsOrigin(),
         methods: ["GET", "POST"],
       },
     }
@@ -122,7 +137,19 @@ export function initSocket(server: HttpServer) {
         );
       });
 
-      socket.on(WebGameEvents.StartGame, (roomCode) => {});
+      socket.on(WebGameEvents.ChnageGameState, async ({ roomCode, state }) => {
+        console.log(roomCode, "start game");
+
+        await patchRoom(roomCode, {
+          state,
+        });
+
+        const room = await getRoom(roomCode);
+
+        if (!room) return;
+
+        io.to(roomCode).emit(WebGameEvents.GameStateChanged, room);
+      });
 
       socket.on(WebGameEvents.Disconnect, async () => {
         console.log("Client disconnected:", socket.id);

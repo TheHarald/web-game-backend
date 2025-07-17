@@ -13,7 +13,7 @@ export enum WebGameEvents {
   RecivePoo = "recive-poo",
 
   // игровые события
-  StartGame = "start-game",
+  ChnageGameState = "chnage-game-state",
   GameStateChanged = "game-state-changed",
 
   CreateImage = "create-image",
@@ -83,7 +83,13 @@ export type ClientToServerEvents = {
     roomCode: string;
   }) => void;
   [WebGameEvents.CreateRoom]: (userName: string) => void;
-  [WebGameEvents.StartGame]: (roomCode: string) => void;
+  [WebGameEvents.ChnageGameState]: ({
+    roomCode,
+    state,
+  }: {
+    roomCode: string;
+    state: WebGameStates;
+  }) => void;
 };
 
 export type ServerToClientEvents = {
@@ -92,5 +98,5 @@ export type ServerToClientEvents = {
   [WebGameEvents.UserLeft]: (room: TRoom) => void;
   [WebGameEvents.MyUserJoined]: (user: TUser) => void;
   [WebGameEvents.RecivePoo]: () => void;
-  [WebGameEvents.GameStateChanged]: (state: WebGameStates) => void;
+  [WebGameEvents.GameStateChanged]: (room: TRoom) => void;
 };
