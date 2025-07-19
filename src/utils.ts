@@ -12,14 +12,28 @@ export function generatateId(length = 4): string {
   return result;
 }
 
-export function shuffleAndAssignMemeRecipients(memes: TMeme[]): TMeme[] {
-  if (memes.length < 2) {
+export function shuffleAndAssignMemeRecipients(
+  memes: TMeme[],
+  withResset = false
+): TMeme[] {
+  let newMemes = [...memes];
+
+  if (withResset) {
+    newMemes = memes.map((meme) => ({
+      ...meme,
+      forUserId: undefined,
+      src: undefined,
+      text: "",
+    }));
+  }
+
+  if (newMemes.length < 2) {
     // Если мемов меньше 2, нечего перемешивать
-    return memes.map((meme) => ({ ...meme, forUserId: meme.authorId }));
+    return newMemes.map((meme) => ({ ...meme, forUserId: meme.authorId }));
   }
 
   // Создаем копию массива, чтобы не мутировать исходный
-  const shuffledMemes = [...memes];
+  const shuffledMemes = [...newMemes];
 
   // Перемешиваем массив
   for (let i = shuffledMemes.length - 1; i > 0; i--) {

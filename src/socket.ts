@@ -140,7 +140,7 @@ export function initSocket(server: HttpServer) {
         );
       });
 
-      socket.on(WebGameEvents.ChnageGameState, async ({ roomCode, state }) => {
+      socket.on(WebGameEvents.ChangeGameState, async ({ roomCode, state }) => {
         console.log(roomCode, "start game");
 
         await patchRoom(roomCode, {
@@ -192,6 +192,25 @@ export function initSocket(server: HttpServer) {
         if (!room) return;
 
         io.to(roomCode).emit(WebGameEvents.MemeCreated, room);
+      });
+
+      socket.on(WebGameEvents.RestartGame, async ({ roomCode }) => {
+        const room = await getRoom(roomCode);
+
+        if (!room) return;
+
+        const clearedMemes = shuffleAndAssignMemeRecipients(room.memes, true);
+
+        await patchRoom(roomCode, {
+          memes: clearedMemes,
+          state: WebGameStates.WaitStart,
+        });
+
+        const clearedRoom = await getRoom(roomCode);
+
+        if (!clearedRoom) return;
+
+        io.to(roomCode).emit(WebGameEvents.GameStateChanged, clearedRoom);
       });
 
       socket.on(WebGameEvents.Disconnect, async () => {
