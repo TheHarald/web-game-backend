@@ -12,6 +12,8 @@ export enum WebGameEvents {
   SendPoo = "send-poo",
   RecivePoo = "recive-poo",
 
+  SomeError = "some-error",
+
   // игровые события
   ChangeGameState = "change-game-state",
   GameStateChanged = "game-state-changed",
@@ -119,4 +121,5 @@ export type ServerToClientEvents = {
   [WebGameEvents.ImageCreated]: (room: TRoom) => void;
   [WebGameEvents.MemeCreated]: (room: TRoom) => void;
   [WebGameEvents.GameResrated]: (room: TRoom) => void;
+  [WebGameEvents.SomeError]: (error: string) => void;
 };
